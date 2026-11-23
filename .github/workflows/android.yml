@@ -14,19 +14,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract project
-        run: |
-          unzip -q FlashShare_Flutter_Starter.zip -d project
-          find project -name pubspec.yaml
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
 
+      - name: Extract starter
+        run: |
+          unzip -q FlashShare_Flutter_Starter.zip -d starter
+          MAIN=$(find starter -path '*/lib/main.dart' -print -quit)
+          PUBSPEC=$(find starter -name pubspec.yaml -print -quit)
+          test -n "$MAIN"
+          test -n "$PUBSPEC"
+          echo "MAIN=$MAIN" >> $GITHUB_ENV
+          echo "PUBSPEC=$PUBSPEC" >> $GITHUB_ENV
+
+      - name: Create Android project
+        run: |
+          flutter create --platforms=android flashshare
+          cp "$MAIN" flashshare/lib/main.dart
+          cp "$PUBSPEC" flashshare/pubspec.yaml
+
       - name: Build APK
         run: |
-          cd "$(dirname "$(find project -name pubspec.yaml | head -n 1)")"
+          cd flashshare
           flutter pub get
           flutter build apk --release
 
@@ -34,4 +45,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FlashShare-APK
-          path: project/**/build/app/outputs/flutter-apk/app-release.apk
+          path: flashshare/build/app/outputs/flutter-apk/app-release.apk
